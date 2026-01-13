@@ -21,10 +21,24 @@ function [X, Y] = generate_swarm_data(type, N, area_size)
             X = R * cos(theta);
             Y = R * sin(theta);
             
-        case 'spiral' % 线状结构 - 螺旋
-            theta = linspace(0, 4*pi, N)';
-            a = 0; b = area_size * 0.05;
+       case 'spiral' % 线状结构 - 螺旋 (修正为等弧长采样)
+            % 论文中的螺旋线点密度是均匀的，不能用 linspace 生成角度
+            % 阿基米德螺旋线弧长近似公式：s proportional to theta^2
+            % 因此，要使 s 均匀，theta 应该正比于 sqrt(t)
+            
+            % 1. 生成总圈数对应的最大角度
+            max_theta = 4 * pi; 
+            
+            % 2. 使用平方根分布生成角度，以抵消半径增大带来的弧长增加
+            % 这样生成的点在曲线上是近似等间距的
+            t = linspace(0, 1, N)';
+            theta = max_theta * sqrt(t); 
+            
+            % 3. 生成坐标
+            a = 0; 
+            b = area_size * 0.05; % 调整间距系数
             r = a + b * theta;
+            
             X = r .* cos(theta);
             Y = r .* sin(theta);
             
