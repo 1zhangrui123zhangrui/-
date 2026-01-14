@@ -53,7 +53,7 @@ function [autocorr_score, B] = calculate_swarm_regularity(X, Y, m, method_type)
             
         otherwise
             error('Method type must be 1, 2, or 3');
-    end
+    
     
     % 4. 计算自相关值
     % 计算 B 的列向量之间的皮尔逊相关系数
@@ -66,4 +66,59 @@ function [autocorr_score, B] = calculate_swarm_regularity(X, Y, m, method_type)
     % 计算矩阵所有元素的平均值 (包含对角线的1)
     % 公式: (1/N^2) * sum(sum(corr_k_l))
     autocorr_score = mean(corr_mat(:));
+end
+% 在calculate_swarm_regularity.m中修改最后部分
+corr_mat = corr(B, 'Type', 'Pearson');
+corr_mat(isnan(corr_mat)) = 1;  % 将NaN视为完全相关（1）
+
+% 只计算非对角线元素的平均值
+N = size(corr_mat, 1);
+autocorr_score = (sum(corr_mat(:)) - N) / (N^2 - N);  % 减去对角线上的N个1
+
+function [autocorr_score, B] = calculate_swarm_regularity(X, Y, m, method_type)
+    % ... 前面的代码保持不变 ...
+    
+    % 计算相关系数矩阵
+    N = size(B, 2);
+    corr_mat = eye(N);  % 对角线初始化为1
+    
+    % 手动计算相关系数，处理低方差情况
+    for i = 1:N
+        for j = i+1:N
+            vi = B(:, i);
+            vj = B(:, j);
+            
+            % 中心化
+            vi_c = vi - mean(vi);
+            vj_c = vj - mean(vj);
+            
+            % 计算协方差和方差
+            cov_ij = sum(vi_c .* vj_c);
+            var_i = sum(vi_c.^2);
+            var_j = sum(vj_c.^2);
+            
+            % 处理低方差情况
+            if var_i < 1e-12 && var_j < 1e-12
+                % 两个都是几乎常数向量
+                if norm(vi - vj) < 1e-12
+                    corr_val = 1;  % 完全相同
+                else
+                    corr_val = 0;  % 不同常数
+                end
+            elseif var_i < 1e-12 || var_j < 1e-12
+                corr_val = 0;  % 一个常数，一个非常数
+            else
+                corr_val = cov_ij / sqrt(var_i * var_j);
+                % 限制在[-1, 1]范围内，防止数值误差
+                corr_val = max(-1, min(1, corr_val));
+            end
+            
+            corr_mat(i, j) = corr_val;
+            corr_mat(j, i) = corr_val;
+        end
+    end
+    
+    % 计算平均相关系数（排除对角线）
+    autocorr_score = (sum(corr_mat(:)) - N) / (N^2 - N);
+end
 end
