@@ -1,42 +1,39 @@
 function [autocorr_score, B] = calculate_swarm_regularity(X, Y, m, method_type)
-% CALCULATE_SWARM_REGULARITY [最终逻辑修正版]
-% 核心修正：
-% 1. 清洗微小浮点误差 -> 0
-% 2. 将 NaN (完美一致的零方差) -> 1.0
+% CALCULATE_SWARM_REGULARITY [NaN修正版]
+% 核心修复：确保完美结构的 NaN 被视为 1.0，而不是 0
 
     N = length(X);
     if N < m + 1, autocorr_score = 0; B = []; return; end
     
-    % 1. 距离计算与排序
+    % 1. 距离计算
     dist_mat = pdist2([X, Y], [X, Y]);
     sorted_dist = sort(dist_mat, 1, 'ascend');
+    if m >= N, m = N-1; end
     R_star = sorted_dist(2:m+1, :); 
     
-    % 2. 构建特征矩阵 B
+    % 2. 构建特征矩阵
     switch method_type
         case 1, B = R_star;
         case 2, r_bar = mean(R_star, 2); B = R_star - r_bar;
         case 3, B = zeros(size(R_star)); B(1,:) = R_star(1,:); B(2:end,:) = diff(R_star);
     end
     
-    % 3. [关键步骤] 数值清洗
-    % 消除计算机浮点误差 (例如 1e-15)，确保完美结构是纯 0
+    % 3. 数值清洗 (去除极小误差)
     B(abs(B) < 1e-10) = 0;
     
     % 4. 计算相关系数
-    % 对于完美有序结构，B的列向量是全0 (或常数)，std=0，corr计算结果为 NaN
     corr_mat = corr(B, 'Type', 'Pearson');
     
-    % 5. [核心逻辑] 处理 NaN
+    % === [关键修复] 处理 NaN ===
     if method_type == 2 || method_type == 3
-        % 对于方法2和3，NaN 表示"无偏差"或"无波动"
-        % 物理意义：所有个体在结构上完美一致 -> 相关性为 1.0
+        % 如果方差为0 (完美一致)，corr为NaN，物理意义上是完美相关(1.0)
+        % 这一步对于 Kaggle 数据集中的"完美编队"样本至关重要
         corr_mat(isnan(corr_mat)) = 1; 
     else
-        % 对于方法1，距离本身不应为0，NaN视为异常
+        % 方法1通常不应出现0距离
         corr_mat(isnan(corr_mat)) = 0;
     end
     
-    % 6. 计算均值
+    % 5. 计算均值
     autocorr_score = mean(corr_mat(:));
 end
