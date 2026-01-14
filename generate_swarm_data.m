@@ -1,4 +1,11 @@
 function [X, Y] = generate_swarm_data(type, N, area_size, cluster_mode)
+% GENERATE_SWARM_DATA 生成器 - 包含高级聚类模式
+% cluster_mode 参数定义 (仅当 type='cluster' 时有效):
+%   1: 宏观有序 + 微观随机 (Org Center, Rnd Inner)
+%   2: 宏观随机 + 微观随机 (Rnd Center, Rnd Inner)
+%   3: 宏观有序 + 微观有序 (Org Center, Org Inner)
+%   4: 宏观随机 + 微观有序 (Rnd Center, Org Inner)
+
     if nargin < 4, cluster_mode = 1; end
     
     X = zeros(N, 1);
@@ -7,102 +14,101 @@ function [X, Y] = generate_swarm_data(type, N, area_size, cluster_mode)
     switch type
         case 'line'
             X = linspace(-area_size/2, area_size/2, N)';
-            Y = X * 0.0; % 纯直线，消除斜率带来的浮点误差
-            
-    case 'circle'
-            % 修正版：非完美闭合圆
-            % 论文中的 0.83 分暗示了圆结构具有某种起止点（类似弯曲的线）
-            % 如果完全闭合且对称，方法2会因为方差为0而失效。
-            
-            % 生成一个稍微不闭合的圆（保留 2*pi 的间隙）
-            % 这里不使用 -2*pi/N 进行完美闭合修正，而是保留 linspace 的默认行为
-            % 这会在首尾之间留下一个比其他邻居间距稍大的"缝隙"
-            theta = linspace(0, 2*pi, N)'; 
-            % 注意：linspace(0, 2pi, N) 本身包含起点和终点，
-            % 但如果我们要让它不重合且有缝隙，可以只取前 N-1 个点，或者调整范围
-            
-            % 更加稳妥的"论文级"复现是直接生成一个 0 到 350度的圆
+            Y = X * 0.0; 
+        case 'circle'
+            % 制造微小缺口的圆，避免零方差
             theta = linspace(0, 2*pi * 0.98, N)';
-            
             R = area_size * 0.35;
             X = R * cos(theta);
             Y = R * sin(theta);
-            
-        case 'spiral' 
-            % 【深度优化】
-            % 目标：让其更像"线"，即：点在线上的间距 < 旋臂之间的间距
-            % 论文数据 0.712 说明它既不是完美的线(0.99)，也不是乱的。
-            
-            % 1. 增加圈数，让结构更丰富
+        case 'spiral'
             num_turns = 4; 
             max_theta = num_turns * 2 * pi;
-            
-            % 2. 修正为等弧长 (保持之前的修正)
             t = linspace(0, 1, N)';
             theta = max_theta * sqrt(t);
-            
-            % 3. 【关键】动态调整旋臂间距 b
-            % 这里的系数 0.1 / num_turns 经过调试，能保证间距适中
-            % 让大部分邻居关系维持在"线上"，但也保留一定的曲率特征
-            a = 0;
-            b = (area_size * 0.4) / max_theta; 
-            
+            a = 0; b = (area_size * 0.4) / max_theta; 
             r = a + b * theta;
             X = r .* cos(theta);
             Y = r .* sin(theta);
-            
         case 'grid'
-            % 【深度优化】
-            % 1. 强制完美平方数
             side_num = round(sqrt(N));
-            
-            % 2. 使用【整数坐标】生成，避免 1.0 vs 1.0000001 的排序误差
-            % 这对方法2极其重要，因为它对"第k个邻居是谁"很敏感
             [x_grid, y_grid] = meshgrid(1:side_num, 1:side_num);
-            
-            % 3. 归一化到 area_size (可选，不影响相关性结果)
             scale = area_size / side_num;
             X = x_grid(:) * scale;
             Y = y_grid(:) * scale;
+            if length(X) > N, X = X(1:N); Y = Y(1:N); end
             
-            % 如果 N 不是完全平方数，截断多余的（虽然建议外部传入完全平方数）
-            if length(X) > N
-                X = X(1:N); Y = Y(1:N);
-            end
+            case 'cluster' % 聚类结构 (深度优化版)
+            % 参数定义
+            % cluster_mode:
+            % 1: 宏观有序 + 微观随机
+            % 2: 宏观随机 + 微观随机
+            % 3: 宏观有序 + 微观有序
+            % 4: 宏观随机 + 微观有序
             
-        case 'random'
-            X = rand(N, 1) * area_size;
-            Y = rand(N, 1) * area_size;
-            
-        case 'cluster'
-            % 保持您之前的优化逻辑
-            num_clusters = 5;
+            num_clusters = 5; 
             points_per_cluster = floor(N / num_clusters);
             X = []; Y = [];
-            if cluster_mode == 2 || cluster_mode == 4
-                 side_c = ceil(sqrt(num_clusters));
-                 [cx, cy] = meshgrid(linspace(area_size*0.2, area_size*0.8, side_c));
-                 centers_x = cx(1:num_clusters)';
-                 centers_y = cy(1:num_clusters)';
+            
+            % --- A. 生成簇中心 (Centers) ---
+            if cluster_mode == 1 || cluster_mode == 3
+                % [宏观有序]: 五点均匀分布 (正五边形)
+                % 论文图5显示的是比较开阔的分布
+                R_center = area_size * 0.35; 
+                angles = linspace(0, 2*pi, num_clusters+1);
+                centers_x = R_center * cos(angles(1:end-1))';
+                centers_y = R_center * sin(angles(1:end-1))';
             else
-                 centers_x = rand(num_clusters, 1) * area_size;
-                 centers_y = rand(num_clusters, 1) * area_size;
+                % [宏观随机]: 随机撒点
+                % 限制在区域内部，防止太靠边
+                centers_x = (rand(num_clusters, 1) - 0.5) * area_size * 0.7;
+                centers_y = (rand(num_clusters, 1) - 0.5) * area_size * 0.7;
             end
+            
+            % --- B. 生成簇内点 (Inner Points) ---
             for i = 1:num_clusters
-                if i == num_clusters, count = N - length(X); else, count = points_per_cluster; end
-                if cluster_mode == 3 || cluster_mode == 4
-                    side = ceil(sqrt(count));
-                    space = area_size * 0.01; % 紧凑
-                    [lx, ly] = meshgrid(1:side, 1:side);
-                    local_x = lx(1:count)' * space + centers_x(i);
-                    local_y = ly(1:count)' * space + centers_y(i);
+                % 处理最后一个簇可能多几个点的情况
+                if i == num_clusters
+                    count = N - length(X); 
                 else
-                    sigma = area_size * 0.03;
+                    count = points_per_cluster; 
+                end
+                
+                if cluster_mode == 3 || cluster_mode == 4
+                    % [微观有序]: 局部微型网格
+                    % 这会让 M2 (修正距离) 分数很高 (>0.8)
+                    side = ceil(sqrt(count));
+                    
+                    % 间距要小，体现"簇"的紧凑性
+                    space = area_size * 0.025; 
+                    
+                    % 生成局部网格
+                    [lx, ly] = meshgrid(linspace(-space*side/2, space*side/2, side));
+                    
+                    % 截取需要的点数
+                    lx = lx(1:count)';
+                    ly = ly(1:count)';
+                    
+                    % 加上中心偏移
+                    local_x = lx + centers_x(i);
+                    local_y = ly + centers_y(i);
+                else
+                    % [微观随机]: 高斯分布 (正态分布)
+                    % 这会让 M2 分数处于中等水平 (~0.5)
+                    % sigma 不能太大(这就散了)，也不能太小(就缩成一点了)
+                    sigma = area_size * 0.03; 
+                    
                     local_x = centers_x(i) + randn(count, 1) * sigma;
                     local_y = centers_y(i) + randn(count, 1) * sigma;
                 end
-                X = [X; local_x]; Y = [Y; local_y];
+                
+                X = [X; local_x];
+                Y = [Y; local_y];
             end
+            
+        case 'random'
+            X = (rand(N, 1) - 0.5) * area_size;
+            Y = (rand(N, 1) - 0.5) * area_size;
             
         otherwise
             error('Unknown type');
