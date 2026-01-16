@@ -1,42 +1,46 @@
 function [autocorr_score, B] = calculate_swarm_regularity(X, Y, m, method_type)
-% CALCULATE_SWARM_REGULARITY [最终逻辑修正版]
-% 核心修正：
-% 1. 清洗微小浮点误差 -> 0
-% 2. 将 NaN (完美一致的零方差) -> 1.0
+% CALCULATE_SWARM_REGULARITY [标准化+精度修复版]
+% 
+% 改进点：
+% 1. 输入坐标 Z-score 标准化：消除数据尺寸(Scaling)对相关性计算的潜在干扰。
+% 2. 完美结构 NaN -> 1.0 逻辑保留。
 
     N = length(X);
     if N < m + 1, autocorr_score = 0; B = []; return; end
     
-    % 1. 距离计算与排序
+    % === [新增] 1. 数据标准化 (Z-score Normalization) ===
+    % 这一步对于 Kaggle 真实数据集至关重要，因为不同样本的坐标范围差异巨大
+    if std(X) > 1e-6, X = (X - mean(X)) / std(X); end
+    if std(Y) > 1e-6, Y = (Y - mean(Y)) / std(Y); end
+    
+    % 2. 距离计算
     dist_mat = pdist2([X, Y], [X, Y]);
     sorted_dist = sort(dist_mat, 1, 'ascend');
-    R_star = sorted_dist(2:m+1, :); 
     
-    % 2. 构建特征矩阵 B
+    % 动态容错：确保 m 不越界
+    real_m = min(m, N-1);
+    R_star = sorted_dist(2:real_m+1, :); 
+    
+    % 3. 构建特征矩阵
     switch method_type
         case 1, B = R_star;
         case 2, r_bar = mean(R_star, 2); B = R_star - r_bar;
         case 3, B = zeros(size(R_star)); B(1,:) = R_star(1,:); B(2:end,:) = diff(R_star);
     end
     
-    % 3. [关键步骤] 数值清洗
-    % 消除计算机浮点误差 (例如 1e-15)，确保完美结构是纯 0
-    B(abs(B) < 1e-10) = 0;
+    % 4. 数值清洗
+    B(abs(B) < 1e-9) = 0;
     
-    % 4. 计算相关系数
-    % 对于完美有序结构，B的列向量是全0 (或常数)，std=0，corr计算结果为 NaN
+    % 5. 计算相关系数
     corr_mat = corr(B, 'Type', 'Pearson');
     
-    % 5. [核心逻辑] 处理 NaN
+    % === NaN 处理逻辑 ===
     if method_type == 2 || method_type == 3
-        % 对于方法2和3，NaN 表示"无偏差"或"无波动"
-        % 物理意义：所有个体在结构上完美一致 -> 相关性为 1.0
+        % 完美结构 (方差为0) -> 相关性为 1
         corr_mat(isnan(corr_mat)) = 1; 
     else
-        % 对于方法1，距离本身不应为0，NaN视为异常
         corr_mat(isnan(corr_mat)) = 0;
     end
     
-    % 6. 计算均值
     autocorr_score = mean(corr_mat(:));
 end
