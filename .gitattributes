@@ -1,0 +1,2 @@
+*.csv filter=lfs diff=lfs merge=lfs -text
+Swarm_Behaviour_Data.csv filter=lfs diff=lfs merge=lfs -text
