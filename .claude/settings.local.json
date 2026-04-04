@@ -7,7 +7,8 @@
       "Bash(.venv/Scripts/pip install:*)",
       "Bash(.venv/Scripts/python.exe -c \"import fitz; print\\('ok'\\)\")",
       "Bash(.venv/Scripts/python.exe python/ablation_7_3.py)",
-      "Bash(.venv/Scripts/python python/ablation_7_3.py)"
+      "Bash(.venv/Scripts/python python/ablation_7_3.py)",
+      "Bash(.venv/Scripts/python python/experiment_rigor_analysis.py)"
     ]
   }
 }
