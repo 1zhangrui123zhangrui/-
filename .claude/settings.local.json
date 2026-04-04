@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(python:*)",
-      "Bash(echo \"Started PID $!\")"
+      "Bash(echo \"Started PID $!\")",
+      "Bash(.venv/Scripts/python.exe -c ':*)",
+      "Bash(.venv/Scripts/pip install:*)",
+      "Bash(.venv/Scripts/python.exe -c \"import fitz; print\\('ok'\\)\")",
+      "Bash(.venv/Scripts/python.exe python/ablation_7_3.py)",
+      "Bash(.venv/Scripts/python python/ablation_7_3.py)"
     ]
   }
 }

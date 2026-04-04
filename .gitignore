@@ -21,3 +21,4 @@ catboost_info/
 
 # 仿真中间结果
 *.npz
+.venv/
