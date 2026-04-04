@@ -47,3 +47,4 @@ function [X, Y] = generate_swarm_data(type, N, area_size, cluster_mode)
             end
     end
 end
+

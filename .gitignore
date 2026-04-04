@@ -1,0 +1,23 @@
+# 仿真生成的大数据集
+*.csv
+*.mat
+*.npy
+*.pth
+*.h5
+
+# 临时文件和日志
+*.log
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+
+# 实验结果文件夹（如果你有专门存放结果的目录）
+/python/results/
+/python/plots/
+
+# CatBoost训练产物
+catboost_info/
+*.cbm
+
+# 仿真中间结果
+*.npz
