@@ -10,7 +10,16 @@
       "Bash(.venv/Scripts/python python/ablation_7_3.py)",
       "Bash(.venv/Scripts/python python/experiment_rigor_analysis.py)",
       "Bash(.venv/Scripts/python -c \"import matplotlib; import matplotlib.pyplot as plt; print\\('matplotlib:', matplotlib.__version__\\); import scipy; print\\('scipy:', scipy.__version__\\)\")",
-      "Bash(.venv/Scripts/python python/challenge_scenarios.py)"
+      "Bash(.venv/Scripts/python python/challenge_scenarios.py)",
+      "Bash(ls \"E:\\\\day work\\\\day work now\\\\shiyanwurenji\\\\code\\\\python\"/*.cbm)",
+      "Bash(py -3 -c \"import numpy; print\\(numpy.__version__\\)\")",
+      "Bash(py -3 --version)",
+      "Bash(conda run:*)",
+      "Bash(xargs -I{} sh -c '\"{}\" -c \"import numpy\" 2>/dev/null && echo \"numpy ok: {}\"')",
+      "Bash(/c/Users/zhangrui/AppData/Local/uv/cache/archive-v0/zFIT90JOwHGzX_UMkCGF5/Scripts/python.exe:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(xargs -I{} sh -c '\"{}\" -c \"import numpy, catboost; print\\(\\\\\"OK: {}\\\\\"\\) \" 2>/dev/null')",
+      "Bash(/e/day work/day work now/shiyanwurenji/code/.venv/Scripts/python.exe:*)"
     ]
   }
 }
