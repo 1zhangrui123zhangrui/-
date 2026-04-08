@@ -20,7 +20,8 @@
       "Bash(cmd.exe:*)",
       "Bash(xargs -I{} sh -c '\"{}\" -c \"import numpy, catboost; print\\(\\\\\"OK: {}\\\\\"\\) \" 2>/dev/null')",
       "Bash(/e/day work/day work now/shiyanwurenji/code/.venv/Scripts/python.exe:*)",
-      "Bash(awk -F',' '{print NF}')"
+      "Bash(awk -F',' '{print NF}')",
+      "Bash(ls:*)"
     ]
   }
 }
