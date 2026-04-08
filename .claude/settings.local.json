@@ -19,7 +19,8 @@
       "Bash(/c/Users/zhangrui/AppData/Local/uv/cache/archive-v0/zFIT90JOwHGzX_UMkCGF5/Scripts/python.exe:*)",
       "Bash(cmd.exe:*)",
       "Bash(xargs -I{} sh -c '\"{}\" -c \"import numpy, catboost; print\\(\\\\\"OK: {}\\\\\"\\) \" 2>/dev/null')",
-      "Bash(/e/day work/day work now/shiyanwurenji/code/.venv/Scripts/python.exe:*)"
+      "Bash(/e/day work/day work now/shiyanwurenji/code/.venv/Scripts/python.exe:*)",
+      "Bash(awk -F',' '{print NF}')"
     ]
   }
 }
