@@ -313,7 +313,7 @@ order_lfc_cc  = np.argsort(imp_lfc_cc_pct)[::-1]
 rank_omega_cc = int(np.where(order_lfc_cc == 9)[0][0]) + 1
 print(f"\n  ω̄ 特征排名:  全测试集第 {rank_omega_te} 位  |  对向穿插子集第 {rank_omega_cc} 位")
 if rank_omega_cc < rank_omega_te:
-    print(f"  → 对向穿插场景下 ω̄ 重要性排名更靠前，支持"误报抑制核心"的论文论断")
+    print(f"  → 对向穿插场景下 ω̄ 重要性排名更靠前，支持[误报抑制核心]的论文论断")
 else:
     print(f"  → ω̄ 在两场景排名相近，建议在论文中如实描述")
 
@@ -547,7 +547,7 @@ print(f"    对向穿插子集 LFC 排名: 第 {rank_omega_cc} 位  ({imp_lfc_cc
 
 if rank_omega_cc < rank_omega_te:
     print(f"  ✓ ω̄ 在对向穿插子集排名更靠前（第{rank_omega_cc}位 < 第{rank_omega_te}位）")
-    print(f"    直接支持论文"ω̄ 在低速度一致性场景（对向穿插）中起关键作用"的论断")
+    print(f"    直接支持论文 [omega_bar 在低速度一致性场景(对向穿插)中起关键作用] 的论断")
 else:
     diff = imp_lfc_cc_pct[9] - imp_lfc_te_pct[9]
     print(f"  ℹ ω̄ 子集排名（{rank_omega_cc}）与全集排名（{rank_omega_te}）相近")

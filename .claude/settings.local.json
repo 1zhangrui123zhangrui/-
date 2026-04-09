@@ -21,7 +21,10 @@
       "Bash(xargs -I{} sh -c '\"{}\" -c \"import numpy, catboost; print\\(\\\\\"OK: {}\\\\\"\\) \" 2>/dev/null')",
       "Bash(/e/day work/day work now/shiyanwurenji/code/.venv/Scripts/python.exe:*)",
       "Bash(awk -F',' '{print NF}')",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(\"e:\\\\day work\\\\day work now\\\\shiyanwurenji\\\\code\\\\.venv\\\\Scripts\\\\python.exe\" -c \"import ast; ast.parse\\(open\\('python/section_7_3_feature_importance.py', encoding='utf-8'\\).read\\(\\)\\); print\\('语法检查通过'\\)\")",
+      "Bash(\"e:\\\\day work\\\\day work now\\\\shiyanwurenji\\\\code\\\\.venv\\\\Scripts\\\\python.exe\" -c \"import ast; ast.parse\\(open\\('python/section_5_1_complexity.py', encoding='utf-8'\\).read\\(\\)\\); print\\('语法检查通过'\\)\")",
+      "Bash(\"e:\\\\day work\\\\day work now\\\\shiyanwurenji\\\\code\\\\.venv\\\\Scripts\\\\python.exe\" -c \"import ast; ast.parse\\(open\\('python/section_5_1_complexity.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }
