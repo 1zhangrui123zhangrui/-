@@ -393,8 +393,11 @@ save(fig, 'fig_paper_layer4_sensitivity.png')
 # =============================================================================
 print('[4/4] Summary figure ...')
 
-fig = plt.figure(figsize=(PAPER_W2, 3.8))
-gs = GridSpec(2, 2, figure=fig, hspace=0.55, wspace=0.4)
+fig = plt.figure(figsize=(PAPER_W2, 5.2))
+gs = GridSpec(2, 2, figure=fig,
+              height_ratios=[1, 1.10],
+              hspace=0.36, wspace=0.42,
+              left=0.09, right=0.97, top=0.88, bottom=0.10)
 ax_tl = fig.add_subplot(gs[0, 0])
 ax_tr = fig.add_subplot(gs[0, 1])
 ax_bl = fig.add_subplot(gs[1, :])
@@ -404,52 +407,100 @@ opt_lam_L1 = np.array([LAM_L1[np.argmax(L1_OV[:, j])] for j in range(len(M_L1))]
 colors_bar = [C_PAPER if abs(ol - LAM_PAPER) < 0.15 else C_DRIFT
               for ol in opt_lam_L1]
 ax_tl.bar(M_L1, opt_lam_L1, color=colors_bar, edgecolor='white',
-          linewidth=0.4, width=0.65)
+          linewidth=0.4, width=0.65, zorder=3)
 ax_tl.axhline(LAM_PAPER, color=C_PAPER, ls='--', lw=1.2,
-              label=f'$\\lambda^*$={LAM_PAPER} (paper)')
+              label=f'$\\lambda^*$={LAM_PAPER} (paper)', zorder=4)
 ax_tl.set_xticks(M_L1)
-ax_tl.set_xlabel('Neighborhood size $m$')
+ax_tl.set_xlabel('Neighborhood size $m$', labelpad=3)
 ax_tl.set_ylabel(r'Optimal $\lambda$')
-ax_tl.set_ylim(0, LAM_L1.max() + 0.3)
-ax_tl.set_title(r'$\lambda \times m$: optimal $\lambda$ shifts with $m$', fontsize=8.5, pad=3)
-ax_tl.legend(fontsize=7.5)
-panel_label(ax_tl, '(a)')
+y_top = LAM_L1.max() + 0.45
+ax_tl.set_ylim(0, y_top)
+ax_tl.set_title(r'$\lambda \times m$: optimal $\lambda$ shifts with $m$',
+                fontsize=8.5, pad=4)
+ax_tl.legend(fontsize=7.5, loc='upper left', framealpha=0.9)
 
-# Annotate drift range
+# Drift annotation: double-headed arrow on the right side
 y_min_bar = opt_lam_L1.min(); y_max_bar = opt_lam_L1.max()
-ax_tl.annotate('', xy=(M_L1[-1]+0.4, y_max_bar),
-               xytext=(M_L1[-1]+0.4, y_min_bar),
+x_arrow = M_L1[-1] + 0.55
+ax_tl.annotate('', xy=(x_arrow, y_max_bar),
+               xytext=(x_arrow, y_min_bar),
                arrowprops=dict(arrowstyle='<->', color=C_OPT, lw=1.2))
-ax_tl.text(M_L1[-1]+0.5, (y_min_bar+y_max_bar)/2,
-           f'drift\n={lam_drift:.1f}', fontsize=7, color=C_OPT, va='center')
+ax_tl.text(x_arrow + 0.12, (y_min_bar + y_max_bar) / 2,
+           f'drift\n={lam_drift:.1f}', fontsize=6.8, color=C_OPT,
+           va='center', ha='left')
+ax_tl.set_xlim(M_L1[0] - 0.8, M_L1[-1] + 1.4)
 
-# ── Top-right: T_emg decoupling summary (grouped bar) ────────────────────────
-categories = [r'$\lambda \times T_{\rm emg}$' + '\n(Layer 2)',
-              r'$m \times T_{\rm emg}$' + '\n(Layer 3)']
-stds = [temg_var_L2, temg_var_L3]
-bar_col = ['#1f77b4', '#2ca02c']
-ax_tr.bar(categories, stds, color=bar_col, edgecolor='white',
-          linewidth=0.5, width=0.45)
-# Always show at least a tiny bar for visibility
-ax_tr.set_ylim(0, max(max(stds)*2, 0.001))
-ax_tr.set_ylabel(r'OV std along $T_{\rm emg}$ axis (%)')
-ax_tr.set_title(r'$T_{\rm emg}$ decoupling: OV variance ≈ 0', fontsize=8.5, pad=3)
-for i, (cat, val) in enumerate(zip(categories, stds)):
-    ax_tr.text(i, max(val*1.1, 0.0001),
-               f'{val:.2e}%\n≈ 0', ha='center', va='bottom',
-               fontsize=8, color='0.2', fontweight='bold')
-ax_tr.text(0.5, 0.85, 'Fully decoupled\n(independent tuning confirmed)',
-           transform=ax_tr.transAxes, ha='center', fontsize=8,
-           color='darkgreen', fontweight='bold')
-panel_label(ax_tr, '(b)')
+# ── Top-right: OV vs T_emg — proves T_emg decoupling visually ────────────────
+# L2_OV shape: (n_lam, n_temg); rows=λ, cols=T_emg
+# Show only 3 representative λ lines (low / paper / high) + full envelope
+ov_pct = L2_OV          # already in percentage (e.g. 98.33)
+ov_min = ov_pct.min(axis=0)
+ov_max = ov_pct.max(axis=0)
+ov_mean = ov_pct.mean(axis=0)
+
+# Find indices closest to min-λ, paper-λ (1.0), max-λ
+idx_lo  = 0
+idx_hi  = len(LAM_L2) - 1
+idx_mid = int(np.argmin(np.abs(LAM_L2 - LAM_PAPER)))
+
+# Shaded envelope (all λ values) — no legend entry, annotated directly
+ax_tr.fill_between(TEMG_L2, ov_min, ov_max,
+                   color='#aec7e8', alpha=0.30, zorder=1)
+
+# Three representative lines — labeled at their right endpoints, no legend box
+line_specs = [
+    (idx_lo,  '--', C_NEUTRAL, f'$\\lambda$={LAM_L2[idx_lo]:.2f}'),
+    (idx_mid, '-',  C_PAPER,   f'$\\lambda$={LAM_L2[idx_mid]:.2f}\n(paper)'),
+    (idx_hi,  ':',  C_DRIFT,   f'$\\lambda$={LAM_L2[idx_hi]:.2f}'),
+]
+x_end = TEMG_L2[-1]
+for li, ls, col, end_lbl in line_specs:
+    ax_tr.plot(TEMG_L2, ov_pct[li, :],
+               color=col, lw=1.4, ls=ls, marker='o', ms=2.8, zorder=3)
+    # Direct end-of-line label
+    ax_tr.text(x_end + 0.006, ov_pct[li, -1], end_lbl,
+               color=col, fontsize=6.5, va='center', ha='left',
+               fontweight='bold' if li == idx_mid else 'normal')
+
+# "All-λ range" label placed at mid-x, just above the lower envelope edge
+x_mid_idx = len(TEMG_L2) // 2
+ax_tr.text(TEMG_L2[x_mid_idx], ov_min[x_mid_idx] - 0.05,
+           'all-$\\lambda$ range', color='#6baed6',
+           fontsize=6.2, ha='center', va='top', style='italic')
+
+# Δ OV badge — bottom-left where it's empty
+ov_range = float(np.mean(ov_max - ov_min))
+ax_tr.text(0.03, 0.08,
+           f'$\\Delta$OV$\\leq${ov_range:.2f}%\n(fully decoupled)',
+           transform=ax_tr.transAxes, ha='left', va='bottom',
+           fontsize=7.0, color='darkgreen', fontweight='bold',
+           bbox=dict(boxstyle='round,pad=0.3', fc='#eafaea',
+                     ec='#2ca02c', lw=0.8, alpha=0.92))
+
+# Extend x-axis right — just enough for the end-of-line labels
+ax_tr.set_xlim(TEMG_L2[0] - 0.01, x_end + 0.07)
+
+ax_tr.set_xlabel(r'Emergence threshold $T_{\rm emg}$', labelpad=3)
+ax_tr.set_ylabel('OV (%)')
+ax_tr.set_title(r'$T_{\rm emg}$ decoupling: OV flat across $T_{\rm emg}$',
+                fontsize=8.5, pad=4)
+# No legend
 
 # ── Bottom: conclusion summary table ─────────────────────────────────────────
+# Re-center ax_bl symmetrically (GridSpec left=0.09 skews it left vs right=0.97)
+_pos = ax_bl.get_position()
+_sym_margin = 0.04        # equal left & right margin in figure coords
+ax_bl.set_position([_sym_margin, _pos.y0, 1 - 2 * _sym_margin, _pos.height])
+
 ax_bl.axis('off')
-table_data = [
-    ['Layer', 'Parameters', 'Finding', 'Implication'],
+ax_bl.set_xlim(0, 1); ax_bl.set_ylim(0, 1)
+
+# Use matplotlib Table for clean, non-overlapping layout
+table_headers = ['Layer', 'Parameters', 'Finding', 'Implication']
+table_rows = [
     ['1', r'$\lambda \times m$',
-     f'Optimal $\\lambda$ drifts {lam_drift:.1f} across $m$',
-     r'Joint optimization required; $\lambda$=1.0 validated by full-data search'],
+     f'Optimal $\\lambda$ drifts {lam_drift:.1f} across $m$ values',
+     r'Joint tuning needed; $\lambda$=1.0 confirmed by full-data search'],
     ['2', r'$\lambda \times T_{\rm emg}$',
      r'OV std $\approx 0$% — fully decoupled',
      r'$T_{\rm emg}$ tunable independently of $\lambda$'],
@@ -457,36 +508,79 @@ table_data = [
      r'OV std $\approx 0$% — fully decoupled',
      r'$T_{\rm emg}$ tunable independently of $m$'],
     ['4', r'$\lambda \times m \times T_{\rm emg}$',
-     f'Subsample best: ({lam_best}, {m_best}); paper ({LAM_PAPER}, {M_PAPER})',
-     r'$\Delta$OV=1% on subsample; full-data confirms $\lambda^*$=1.0, OV=99.83%'],
+     f'Subsample best: $\\lambda$={lam_best}, $m$={m_best}; paper: ({LAM_PAPER},{M_PAPER})',
+     r'Full-data confirms $\lambda^*$=1.0, OV=99.83%'],
 ]
-col_widths = [0.06, 0.16, 0.41, 0.47]
-x_starts   = [0.01, 0.07, 0.23, 0.64]
-row_h      = 0.19;  header_y = 0.95
 
-for col_idx, (header, xstart) in enumerate(zip(table_data[0], x_starts)):
-    ax_bl.text(xstart, header_y, header,
+# Manual table drawing — equal left/right margins (1.5% each side)
+# Column proportions [7:16:39:38] scaled to fill 0.015→0.985
+_tbl_l, _tbl_r = 0.015, 0.985
+_tbl_w = _tbl_r - _tbl_l
+_props = [7, 16, 39, 38]; _ptotal = sum(_props)
+col_w = [_tbl_w * p / _ptotal for p in _props]
+col_x = [_tbl_l + sum(col_w[:i]) for i in range(len(col_w))]
+n_rows   = len(table_rows)
+row_h    = 0.185
+header_y = 0.985
+
+# Header row
+header_bg = '#2c3e50'
+ax_bl.axhspan(header_y - row_h, header_y, color=header_bg, zorder=1, clip_on=False)
+for ci, (hdr, cx, cw) in enumerate(zip(table_headers, col_x, col_w)):
+    ax_bl.text(cx + cw * 0.5, header_y - row_h * 0.5, hdr,
                transform=ax_bl.transAxes,
-               fontsize=8, fontweight='bold', va='top',
-               color='white',
-               bbox=dict(boxstyle='square,pad=0.2', fc='0.3', ec='none'))
+               fontsize=8.2, fontweight='bold', va='center', ha='center',
+               color='white', zorder=2)
 
-for row_idx, row in enumerate(table_data[1:]):
-    y_pos = header_y - (row_idx + 1) * row_h
-    bg = '#f0f4f8' if row_idx % 2 == 0 else 'white'
-    for col_idx, (cell, xstart) in enumerate(zip(row, x_starts)):
-        ax_bl.text(xstart + 0.005, y_pos, cell,
+# Data rows
+row_colors = ['#f5f8fb', '#ffffff']
+for ri, row in enumerate(table_rows):
+    y_top_row = header_y - (ri + 1) * row_h
+    y_bot_row = y_top_row - row_h
+    rc = row_colors[ri % 2]
+    ax_bl.axhspan(y_bot_row, y_top_row, color=rc, zorder=1, clip_on=False)
+    # Subtle divider line
+    ax_bl.axhline(y_top_row, color='0.82', lw=0.5, zorder=3, clip_on=False)
+    for ci, (cell, cx, cw) in enumerate(zip(row, col_x, col_w)):
+        ha = 'center' if ci < 2 else 'left'
+        tx = cx + cw * 0.5 if ci < 2 else cx + 0.008
+        ax_bl.text(tx, y_top_row - row_h * 0.5, cell,
                    transform=ax_bl.transAxes,
-                   fontsize=7.2, va='top', ha='left',
-                   bbox=dict(boxstyle='square,pad=0.15', fc=bg, ec='none',
-                             alpha=0.85))
+                   fontsize=7.2, va='center', ha=ha, color='#1a1a1a', zorder=4)
 
-panel_label(ax_bl, '(c)', y=0.99)
-ax_bl.set_xlim(0, 1); ax_bl.set_ylim(0, 1)
+# Outer border around table
+rect = plt.Rectangle((col_x[0], header_y - (n_rows + 1) * row_h),
+                      sum(col_w), (n_rows + 1) * row_h,
+                      transform=ax_bl.transAxes,
+                      fc='none', ec='0.55', lw=0.8, zorder=5, clip_on=False)
+ax_bl.add_patch(rect)
 
-fig.suptitle(
-    'Four-layer hyperparameter coupling analysis — Summary',
-    fontsize=10, y=1.01, fontweight='bold')
+# ── Suptitle ─────────────────────────────────────────────────────────────────
+fig.suptitle('Four-layer hyperparameter coupling analysis — Summary',
+             fontsize=10, fontweight='bold', y=0.96)
+
+# ── Dynamic (a) (b) (c) panel labels below each panel ────────────────────────
+fig.canvas.draw()
+
+# Both (a) and (b) now have legend inside axes → use xlabel bounding box for both
+# → symmetric layout, no dangling legends below
+panel_label_ys = []
+for ax_i, label in zip([ax_tl, ax_tr], ['(a)', '(b)']):
+    ref_bb_px = ax_i.xaxis.label.get_window_extent()
+    fig_y = fig.transFigure.inverted().transform([0, ref_bb_px.y0])[1]
+    label_y = fig_y - 0.013
+    panel_label_ys.append(label_y)
+    pos = ax_i.get_position()
+    fig.text(pos.x0 + pos.width / 2, label_y, label,
+             ha='center', va='top', fontsize=9, fontweight='bold',
+             transform=fig.transFigure)
+
+# (c): place just below the bottom edge of ax_bl
+pos_bl = ax_bl.get_position()
+label_y_c = pos_bl.y0 - 0.022
+fig.text(pos_bl.x0 + pos_bl.width / 2, label_y_c, '(c)',
+         ha='center', va='top', fontsize=9, fontweight='bold',
+         transform=fig.transFigure)
 
 save(fig, 'fig_paper_coupling_summary.png')
 

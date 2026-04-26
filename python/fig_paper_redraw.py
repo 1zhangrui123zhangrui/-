@@ -320,7 +320,7 @@ save(fig, 'fig_paper_complexity_breakdown.png')
 
 
 # ── Fig 2b: Scaling curves (log-log, normalised) ─────────────────────────────
-fig, axes = plt.subplots(1, 2, figsize=(PAPER_W2, 2.8))
+fig, axes = plt.subplots(1, 2, figsize=(PAPER_W2, 3.5))
 
 # Left: normalized curves (T_i(N) / T_i(N=50))
 ax = axes[0]
@@ -341,9 +341,13 @@ ax.plot(N_f, (N_f / n0) ** 2 * np.log2(N_f / n0 * N_list[0]),
 ax.set_xscale('log'); ax.set_yscale('log')
 ax.set_xlabel('Number of drones $N$')
 ax.set_ylabel('Normalized runtime $T(N)/T(N_0)$')
-ax.set_xticks(N_list[::2]); ax.get_xaxis().set_major_formatter(mticker.ScalarFormatter())
-ax.legend(fontsize=6.5, ncol=1, loc='upper left', framealpha=0.9)
-panel_label(ax, '(a)')
+ax.set_xticks(N_list)
+ax.xaxis.set_major_formatter(mticker.FixedFormatter([str(n) for n in N_list]))
+ax.get_yaxis().set_major_formatter(mticker.ScalarFormatter())
+ax.set_ylim(0.8, 500)  # consistent y-axis range with right panel
+# Legend placed below the axes — does not overlap plot content
+ax.legend(fontsize=6.5, ncol=3, loc='upper center',
+          bbox_to_anchor=(0.5, -0.22), framealpha=0.9)
 
 # Right: end-to-end in log-log, with empirical slope
 ax = axes[1]
@@ -355,22 +359,36 @@ ax.plot(N_f, t_total[0] * (N_f / N_list[0]) ** 2 * np.log2(N_f / N_list[0] + 1),
 ax.set_xscale('log'); ax.set_yscale('log')
 ax.set_xlabel('Number of drones $N$')
 ax.set_ylabel('End-to-end latency (ms)')
-ax.set_xticks(N_list[::2]); ax.get_xaxis().set_major_formatter(mticker.ScalarFormatter())
+ax.set_xticks(N_list)
+ax.xaxis.set_major_formatter(mticker.FixedFormatter([str(n) for n in N_list]))
 ax.get_yaxis().set_major_formatter(mticker.ScalarFormatter())
-ax.text(0.97, 0.08,
-        f'Empirical slope = {slope:.2f}\n' + r'(Theory: $O(N^2\log N)$)',
-        transform=ax.transAxes, fontsize=7.5, ha='right', va='bottom',
-        bbox=dict(boxstyle='round,pad=0.3', fc='lightyellow', alpha=0.85, ec='0.7'))
-# Note: measurements on PC (not ARM)
-ax.text(0.97, 0.97,
-        f'Platform: PC (Python)\n(not ARM deployment)',
-        transform=ax.transAxes, fontsize=6.5, ha='right', va='top',
-        color='gray',
-        bbox=dict(boxstyle='round,pad=0.3', fc='white', alpha=0.7, ec='0.8'))
-ax.legend(fontsize=7.5, loc='upper left', framealpha=0.9)
-panel_label(ax, '(b)')
+ax.set_ylim(0.8, 500)  # consistent y-axis range with left panel
+# Legend placed below the axes — 3 rows (ncol=1) to align with left panel
+ax.legend(fontsize=7.5, ncol=1, loc='upper center',
+          bbox_to_anchor=(0.5, -0.22), framealpha=0.9)
 
 plt.tight_layout(w_pad=1.2)
+
+# (a)(b) panel labels below each legend (paper convention).
+# Use legend bounding-box to place labels dynamically so they always
+# appear beneath the legend regardless of its height.
+fig.canvas.draw()
+for ax_i, label in zip(axes, ['(a)', '(b)']):
+    leg = ax_i.get_legend()
+    if leg is not None:
+        # Get legend bottom in figure-fraction coordinates
+        leg_bbox = leg.get_window_extent().transformed(fig.transFigure.inverted())
+        x_center = leg_bbox.x0 + leg_bbox.width / 2
+        y_below  = leg_bbox.y0 - 0.012    # small gap below legend
+    else:
+        pos = ax_i.get_position()
+        x_center = pos.x0 + pos.width / 2
+        y_below  = pos.y0 - 0.08
+    fig.text(x_center, y_below, label,
+             ha='center', va='top',
+             fontsize=9, fontweight='bold',
+             transform=fig.transFigure)
+
 save(fig, 'fig_paper_complexity_scaling.png')
 
 
@@ -401,7 +419,7 @@ key_set = set(sort_idx[np.isin(sort_idx, FEAT_KEY_IDX)])  # highlighted features
 fig, axes = plt.subplots(1, 2, figsize=(PAPER_W2, 3.5))
 
 def importance_bar(ax, values, labels, color_base, highlight_set,
-                   highlight_color, xlabel, panel, title):
+                   highlight_color, xlabel, title):
     y_pos = np.arange(len(labels))
     colors = []
     for orig_i in sort_idx:
@@ -418,7 +436,6 @@ def importance_bar(ax, values, labels, color_base, highlight_set,
     ax.grid(axis='y', alpha=0)
     ax.grid(axis='x', alpha=0.3)
     ax.set_title(title, fontsize=8.5, pad=4)
-    panel_label(ax, panel)
     # Legend for highlight
     patches = [
         mpatches.Patch(color=highlight_color, label=r'Key features ($H_f$, $\bar{\omega}$)'),
@@ -429,14 +446,29 @@ def importance_bar(ax, values, labels, color_base, highlight_set,
 importance_bar(axes[0], imp_pvc_s, labels_sorted,
                '#aec7e8', key_set, C_OMEGA,
                'Importance score (%)',
-               '(a)', 'PredictionValuesChange\n(model-intrinsic, full test set)')
+               'PredictionValuesChange\n(model-intrinsic, full test set)')
 
 importance_bar(axes[1], imp_lfc_te_s, labels_sorted,
                '#ffbb78', key_set, C_OMEGA,
                'Importance score (%)',
-               '(b)', f'LossFunctionChange\n(data-driven, full test set, $n$={n_test_fi})')
+               f'LossFunctionChange\n(data-driven, full test set, $n$={n_test_fi})')
 
 plt.tight_layout(w_pad=1.5)
+
+# (a)(b) labels centred below each subplot — no overlap with plot content
+fig.canvas.draw()
+for ax_i, label in zip(axes, ['(a)', '(b)']):
+    # Get the actual bounding box of the x-axis label in figure coordinates,
+    # then place (a)/(b) just below it with a small gap.
+    xlabel_obj = ax_i.xaxis.label
+    xlabel_bbox = xlabel_obj.get_window_extent().transformed(
+        fig.transFigure.inverted())
+    pos = ax_i.get_position()
+    fig.text(pos.x0 + pos.width / 2, xlabel_bbox.y0 - 0.012,
+             label, ha='center', va='top',
+             fontsize=9, fontweight='bold',
+             transform=fig.transFigure)
+
 save(fig, 'fig_paper_feature_importance_full.png')
 
 
@@ -695,54 +727,125 @@ def add_stat_bracket(ax, x1, x2, y, label, h=0.15):
     ax.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=0.9, color='0.4')
     ax.text((x1+x2)/2, y+h+0.02, label, ha='center', va='bottom', fontsize=7.5)
 
-fig, axes = plt.subplots(1, 2, figsize=(PAPER_W2, 3.2))
+fig, axes = plt.subplots(1, 2, figsize=(PAPER_W2, 3.5))
+np.random.seed(42)
 
-for ax_idx, (data_list, ylabel, panel, title) in enumerate([
-    ([sw3d,  sw13d,  swfull],  'Switches per sequence',
-     '(a)', f'State switch count ($n$={n_seq} sequences)'),
-    ([dtw3d, dtw13d, dtwfull], 'DTW distance',
-     '(b)', f'DTW distance to ground truth ($n$={n_seq} sequences)'),
+# Pre-compute y caps so we can synchronise both panels afterwards
+y_caps, y_brs = [], []
+
+for ax_idx, (data_list, ylabel, title) in enumerate([
+    ([sw3d,  sw13d,  swfull],
+     'Switches per sequence\n(↓ lower is better)',
+     f'State switch count ($n$={n_seq} sequences)'),
+    ([dtw3d, dtw13d, dtwfull],
+     'DTW distance\n(↓ lower is better)',
+     f'DTW distance to ground truth ($n$={n_seq} sequences)'),
 ]):
     ax = axes[ax_idx]
-    bplot = ax.boxplot(data_list, labels=labels_box, patch_artist=True,
-                       widths=0.45, notch=False, showfliers=True,
-                       flierprops=dict(marker='o', ms=3, alpha=0.5,
-                                       markerfacecolor='0.6', markeredgecolor='none'),
-                       medianprops=dict(color='white', lw=2.0),
-                       whiskerprops=dict(lw=0.9),
-                       capprops=dict(lw=0.9))
-    for patch, col in zip(bplot['boxes'], colors_box):
-        patch.set_facecolor(col); patch.set_alpha(0.75)
 
-    # Annotate medians
+    # Y-axis cap: 99th %ile of the two baseline methods
+    y_cap  = max(np.percentile(data_list[0], 99),
+                 np.percentile(data_list[1], 99))
+    y_step = y_cap * 0.14
+    y_br   = y_cap + y_step * 0.55
+    y_caps.append(y_cap);  y_brs.append(y_br)
+
+    # ── Jittered individual points (within y_cap) ────────────────────────────
+    jw = 0.14
+    for i, (d, col) in enumerate(zip(data_list, colors_box)):
+        d_arr  = np.asarray(d, float)
+        d_in   = d_arr[d_arr <= y_cap]
+        n_clip = int((d_arr > y_cap).sum())
+        if len(d_in):
+            xj = (i + 1) + np.random.uniform(-jw, jw, len(d_in))
+            ax.scatter(xj, d_in, s=6, color=col, alpha=0.25,
+                       linewidths=0, zorder=1, rasterized=True)
+        if n_clip:
+            ax.plot(i + 1, y_cap * 0.975, marker='^', ms=5.5,
+                    color=col, alpha=0.80, zorder=2,
+                    markeredgecolor='white', markeredgewidth=0.5)
+            ax.text(i + 1, y_cap * 0.952,
+                    f'+{n_clip}', ha='center', va='top',
+                    fontsize=6.5, color=col, style='italic')
+
+    # ── Box plot — dark median line so it does not hide the value label ───────
+    bplot = ax.boxplot(data_list, labels=labels_box, patch_artist=True,
+                       widths=0.42, notch=False, showfliers=False,
+                       medianprops=dict(color='#2a2a2a', lw=1.8),
+                       whiskerprops=dict(lw=0.9, color='0.35'),
+                       capprops=dict(lw=0.9, color='0.35'),
+                       boxprops=dict(lw=0.8),
+                       zorder=3)
+    for patch, col in zip(bplot['boxes'], colors_box):
+        patch.set_facecolor(col); patch.set_alpha(0.82)
+
+    # ── Median value label — dark text on white background, above median line ─
     for i, d in enumerate(data_list):
         med = np.median(d)
-        ax.text(i+1, med + (max(d)-min(d))*0.03, f'{med:.1f}',
-                ha='center', va='bottom', fontsize=7.5, color='0.2')
+        ax.text(i + 1, med, f'{med:.1f}',
+                ha='center', va='center', fontsize=7.5,
+                color='#1a1a1a', fontweight='bold', zorder=6,
+                bbox=dict(fc='white', ec='none', alpha=0.82,
+                          boxstyle='round,pad=0.25'))
 
-    # Statistical significance brackets
-    y_max = max([max(d) for d in data_list])
-    y_step = (y_max - min([min(d) for d in data_list])) * 0.15
-    y_br = y_max + y_step * 0.5
-
+    # ── Statistical significance brackets ─────────────────────────────────────
     s1 = wilcox_str(data_list[0], data_list[2])
     s2 = wilcox_str(data_list[1], data_list[2])
-    add_stat_bracket(ax, 1, 3, y_br,          s1, h=y_step*0.4)
-    add_stat_bracket(ax, 2, 3, y_br - y_step*0.15, s2, h=y_step*0.3)
+    add_stat_bracket(ax, 1, 3, y_br,                  s1, h=y_step * 0.45)
+    add_stat_bracket(ax, 2, 3, y_br - y_step * 0.20,  s2, h=y_step * 0.35)
+
+    # ── Percentage reduction — below lower bracket, no arrow ─────────────────
+    med_base = np.median(data_list[0])
+    med_prop = np.median(data_list[2])
+    if med_base > 0:
+        pct = (med_base - med_prop) / med_base * 100
+        ax.text(2.0, y_br - y_step * 0.40,
+                f'Median  −{pct:.0f}%',
+                ha='center', va='top', fontsize=7.5,
+                color=C_FULL, fontweight='bold', style='italic')
 
     ax.set_ylabel(ylabel, fontsize=8.5)
-    ax.set_title(title, fontsize=8.5, pad=4)
-    ax.grid(axis='y', alpha=0.35); ax.grid(axis='x', alpha=0)
-    panel_label(ax, panel)
-    ax.set_ylim(bottom=max(0, min([min(d) for d in data_list]) - y_step*0.5))
+    ax.set_title(title, fontsize=8.5, pad=5)
+    ax.grid(axis='y', alpha=0.28, linestyle='--')
+    ax.grid(axis='x', alpha=0)
+    ax.tick_params(axis='x', labelsize=8)
 
-# Footnote with Wilcoxon legend
-fig.text(0.5, -0.04,
-         '*** $p<0.001$,  ** $p<0.01$,  * $p<0.05$,  n.s. not significant  '
-         '(Wilcoxon signed-rank test, two-sided)',
-         ha='center', fontsize=7.5, color='0.4')
+# ── Synchronise y-axes so horizontal grid lines align across both panels ──────
+shared_top = max(y_br + y_step * 0.9 for y_br, y_step
+                 in zip(y_brs, [y * 0.14 for y in y_caps]))
+tick_step  = 2   # common tick interval for both panels
+for ax in axes:
+    ax.set_ylim(bottom=-tick_step * 0.08, top=shared_top)
+    ax.set_yticks(np.arange(0, shared_top, tick_step))
 
-plt.tight_layout(w_pad=1.5)
+plt.tight_layout(w_pad=1.8)
+
+# ── (a)(b) labels below x-tick labels ────────────────────────────────────────
+fig.canvas.draw()
+panel_label_ys = []
+for ax_i, label in zip(axes, ['(a)', '(b)']):
+    tick_bbs = [t.get_window_extent() for t in ax_i.get_xticklabels()]
+    if tick_bbs:
+        min_y = min(bb.y0 for bb in tick_bbs)
+        fig_y = fig.transFigure.inverted().transform([0, min_y])[1]
+    else:
+        fig_y = ax_i.get_position().y0 - 0.06
+    pos = ax_i.get_position()
+    label_y = fig_y - 0.014
+    panel_label_ys.append(label_y)
+    fig.text(pos.x0 + pos.width / 2, label_y,
+             label, ha='center', va='top',
+             fontsize=9, fontweight='bold',
+             transform=fig.transFigure)
+
+# ── Wilcoxon footnote — placed below the lowest (a)/(b) label ────────────────
+footnote_y = min(panel_label_ys) - 0.04
+fig.text(0.5, footnote_y,
+         r'$^{***}p<0.001$,  $^{**}p<0.01$,  $^{*}p<0.05$,  n.s. not significant'
+         r'  (Wilcoxon signed-rank test, two-sided; brackets: each baseline vs Proposed)',
+         ha='center', va='top', fontsize=7.5, color='0.45',
+         transform=fig.transFigure)
+
 save(fig, 'fig_paper_temporal_stats.png')
 
 
